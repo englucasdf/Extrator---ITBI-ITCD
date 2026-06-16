@@ -69,7 +69,7 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
 </header>
 
 <div class="card">
-  <h2>Passo 1 — Tipo de isenção</h2>
+  <h2>Passo 1 — Tipo de operação</h2>
   <div class="tipo-row">
     <button class="tipo-btn ativo" id="btn-itbi" onclick="selecionarTipo('ITBI')">
       🏠 Isenção ITBI<br><span style="font-size:11px;font-weight:400;color:#94a3b8">Usa Valor do <strong>Imóvel</strong></span>
@@ -77,6 +77,31 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
     <button class="tipo-btn" id="btn-itcd" onclick="selecionarTipo('ITCD')">
       📋 Isenção ITCD<br><span style="font-size:11px;font-weight:400;color:#94a3b8">Usa Valor do <strong>Terreno</strong></span>
     </button>
+    <button class="tipo-btn" id="btn-cancelamento" onclick="selecionarTipo('CANCELAMENTO')">
+      🚫 Cancelamento<br><span style="font-size:11px;font-weight:400;color:#94a3b8">Cancelar lançamento errado</span>
+    </button>
+  </div>
+</div>
+
+<!-- Card campos fixos do cancelamento -->
+<div class="card" id="card-cancelamento" style="display:none">
+  <h2>Dados do cancelamento (aplicados a todo o lote)</h2>
+  <p style="font-size:13px;color:#64748b;margin-bottom:12px">
+    Esses dados são os mesmos para todos os CPFs do lote. Preencha uma vez só.
+  </p>
+  <div class="mapa-grid">
+    <div class="mapa-item">
+      <label>📄 Número do Ato</label>
+      <input type="text" id="cancel-ato" class="cell-input" style="border:1.5px solid #e2e8f0;padding:8px 10px" placeholder="Ex: 384">
+    </div>
+    <div class="mapa-item">
+      <label>📅 Ano</label>
+      <input type="text" id="cancel-ano" class="cell-input" style="border:1.5px solid #e2e8f0;padding:8px 10px" placeholder="Ex: 2026">
+    </div>
+  </div>
+  <div class="mapa-item" style="margin-top:12px">
+    <label>✏️ Justificativa</label>
+    <textarea id="cancel-justificativa" style="height:80px" placeholder="Digite a justificativa do cancelamento..."></textarea>
   </div>
 </div>
 
@@ -165,13 +190,16 @@ function selecionarTipo(t){
   tipoAtual=t;
   document.getElementById('btn-itbi').classList.toggle('ativo',t==='ITBI');
   document.getElementById('btn-itcd').classList.toggle('ativo',t==='ITCD');
-  // Mostra só o campo de valor relevante
+  document.getElementById('btn-cancelamento').classList.toggle('ativo',t==='CANCELAMENTO');
+  // Mostra só o campo de valor relevante (ITBI/ITCD) ou os campos de cancelamento
   const vi=document.getElementById('item-valor-imovel');
   const vt=document.getElementById('item-valor-terreno');
+  const cardCancel=document.getElementById('card-cancelamento');
   if(vi&&vt){
     vi.style.display=t==='ITBI'?'block':'none';
     vt.style.display=t==='ITCD'?'block':'none';
   }
+  if(cardCancel) cardCancel.style.display = t==='CANCELAMENTO' ? 'block' : 'none';
 }
 
 function normalizar(txt){
@@ -377,6 +405,54 @@ function salvar(){
   if(temErro){mostrarStatus('status-tabela','⚠️ Corrija os campos em vermelho.','erro');return;}
   const t=tipoAtual;
   const dj=JSON.stringify(registros);
+
+  if(t==='CANCELAMENTO'){
+    const ato=(document.getElementById('cancel-ato').value||'').trim();
+    const ano=(document.getElementById('cancel-ano').value||'').trim();
+    const justificativa=(document.getElementById('cancel-justificativa').value||'').trim();
+    if(!ato||!ano||!justificativa){
+      mostrarStatus('status-tabela','⚠️ Preencha Número do Ato, Ano e Justificativa no card acima antes de salvar.','erro');
+      return;
+    }
+    const atoJson=JSON.stringify(ato),anoJson=JSON.stringify(ano),justJson=JSON.stringify(justificativa);
+    SCRIPT_ITCD=`(async function(){
+const dados=${dj};
+const ato=${atoJson},ano=${anoJson},justificativa=${justJson};
+async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function aguardar(fn,timeout){const inicio=Date.now();while(Date.now()-inicio<timeout){const el=fn();if(el&&!el.disabled)return el;await sleep(300);}return null;}
+const resp=prompt('Total: '+dados.length+' registros.\\nIniciar a partir de qual numero? (1=do inicio)');
+const index=Math.max(0,(parseInt(resp)||1)-1);
+alert('Iniciando a partir do registro '+(index+1)+' de '+dados.length);
+let adicionados=0;
+for(let i=index;i<dados.length;i++){
+  const d=dados[i];const cpf=d.cpf;
+  const btnAdd=await aguardar(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Adicionar Registro')),10000);
+  if(!btnAdd){alert('Botao Adicionar Registro nao encontrado! Parado no '+(i+1));break;}
+  btnAdd.click();await sleep(2000);
+  const inputs=document.querySelectorAll('input');
+  const textareas=document.querySelectorAll('textarea');
+  if(!inputs[0]){alert('Campo CPF nao encontrado! Parado no '+(i+1));break;}
+  const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+  const setterTA=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set;
+  setter.call(inputs[0],cpf);inputs[0].dispatchEvent(new Event('input',{bubbles:true}));await sleep(400);
+  // Numero do Ato, Ano, IPTU (assumindo ordem: CPF, Numero do Ato, Ano, IPTU)
+  if(inputs[1]){setter.call(inputs[1],ato);inputs[1].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+  if(inputs[2]){setter.call(inputs[2],ano);inputs[2].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+  if(inputs[3]&&d.iptu){setter.call(inputs[3],d.iptu);inputs[3].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+  if(textareas[0]){setterTA.call(textareas[0],justificativa);textareas[0].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+  const btnAd=await aguardar(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Adicionar'),15000);
+  if(!btnAd){alert('Botao Adicionar nao habilitado! Parado no '+(i+1)+'. Rode novamente a partir deste numero.');break;}
+  btnAd.click();await sleep(1500);adicionados++;
+  console.log('\\u2705 '+(i+1)+'/'+dados.length+' - '+cpf);
+}
+alert('\\u2705 Concluido! Adicionados: '+adicionados);
+})();`;
+    mostrarStatus('status-tabela','✅ '+registros.length+' registros prontos!','ok');
+    document.getElementById('script-box').textContent=SCRIPT_ITCD;
+    document.getElementById('modal-overlay').classList.add('aberto');
+    return;
+  }
+
   SCRIPT_ITCD=`(async function(){
 const dados=${dj};const tipo='${t}';
 async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
