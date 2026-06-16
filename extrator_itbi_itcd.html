@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extrator ITBI / ITCD — CODHAB</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; min-height: 100vh; padding: 32px 24px; }
+header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.logo { width: 44px; height: 44px; background: #1a56db; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: 800; flex-shrink: 0; }
+header h1 { font-size: 20px; font-weight: 700; }
+header p { font-size: 13px; color: #64748b; margin-top: 2px; }
+.card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.card h2 { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+.tipo-row { display: flex; gap: 12px; }
+.tipo-btn { flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; cursor: pointer; font-size: 14px; font-weight: 600; color: #64748b; transition: all 0.15s; text-align: center; }
+.tipo-btn.ativo { border-color: #1a56db; background: #eff6ff; color: #1a56db; }
+textarea { width: 100%; height: 130px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12px; font-family: 'Consolas', monospace; resize: vertical; color: #1a2332; outline: none; }
+textarea:focus { border-color: #1a56db; }
+.btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: #1a56db; color: white; }
+.btn-primary:hover { background: #1648c0; }
+.btn-success { background: #16a34a; color: white; }
+.btn-success:hover { background: #15803d; }
+.btn-secondary { background: #f1f5f9; color: #475569; }
+.btn-secondary:hover { background: #e2e8f0; }
+.btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.status { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 14px; display: none; }
+.status-ok { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.status-erro { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.status-info { background: #eff6ff; color: #1a56db; border: 1px solid #bfdbfe; }
+.mapa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.mapa-item label { display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+.mapa-item select { width: 100%; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #1a2332; outline: none; background: white; }
+.mapa-item select:focus { border-color: #1a56db; }
+.mapa-item select.mapeado { border-color: #16a34a; background: #f0fdf4; }
+.colunas-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.col-tag { padding: 4px 10px; background: #f1f5f9; border-radius: 20px; font-size: 11px; color: #475569; border: 1px solid #e2e8f0; }
+.col-tag.cpf-tag { background: #eff6ff; color: #1a56db; border-color: #bfdbfe; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #f8fafc; color: #64748b; font-weight: 700; font-size: 11px; text-transform: uppercase; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.cell-input { width: 100%; border: 1.5px solid transparent; border-radius: 6px; padding: 5px 8px; font-size: 13px; font-family: inherit; background: transparent; color: #1a2332; outline: none; }
+.cell-input:focus { border-color: #1a56db; background: #eff6ff; }
+.cell-input.erro { border-color: #ef4444; background: #fef2f2; }
+.alerta-ocr { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 24px; }
+.modal-overlay.aberto { display: flex; }
+.modal { background: white; border-radius: 14px; padding: 28px; max-width: 640px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.modal p { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+.steps-modal { background: #f8fafc; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: #475569; line-height: 1.8; }
+.script-box { background: #0f172a; color: #a3e635; border-radius: 8px; padding: 14px; font-family: 'Consolas', monospace; font-size: 11px; max-height: 180px; overflow-y: auto; margin-bottom: 14px; white-space: pre-wrap; word-break: break-all; }
+.btn-copiar { width: 100%; padding: 12px; background: #1a56db; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+.btn-copiar:hover { background: #1648c0; }
+.btn-fechar-modal { width: 100%; padding: 10px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.copiado { background: #16a34a !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">C</div>
+  <div>
+    <h1>Extrator ITBI / ITCD</h1>
+    <p>CODHAB — Automação de lançamento de registros</p>
+  </div>
+</header>
+
+<div class="card">
+  <h2>Passo 1 — Tipo de isenção</h2>
+  <div class="tipo-row">
+    <button class="tipo-btn ativo" id="btn-itbi" onclick="selecionarTipo('ITBI')">
+      🏠 Isenção ITBI<br><span style="font-size:11px;font-weight:400;color:#94a3b8">Usa Valor do <strong>Imóvel</strong></span>
+    </button>
+    <button class="tipo-btn" id="btn-itcd" onclick="selecionarTipo('ITCD')">
+      📋 Isenção ITCD<br><span style="font-size:11px;font-weight:400;color:#94a3b8">Usa Valor do <strong>Terreno</strong></span>
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Passo 2 — Cole os dados</h2>
+  <p style="font-size:13px;color:#64748b;margin-bottom:12px">
+    Funciona com <strong>qualquer formato</strong> — Excel, PDF, tabela do sistema. Selecione os dados (sem cabeçalho), copie com <strong>Ctrl+C</strong> e cole abaixo.
+  </p>
+  <textarea id="texto-dados" placeholder="Cole aqui os dados copiados (Excel, PDF, sistema...)"></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="analisarColunas()">🔍 Analisar colunas</button>
+    <button class="btn btn-secondary" onclick="limpar()">Limpar</button>
+  </div>
+  <div id="status-analise" class="status"></div>
+</div>
+
+<div class="card" id="card-mapa" style="display:none">
+  <h2>Passo 3 — Mapear colunas</h2>
+  <div id="banner-modo" style="border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none"></div>
+  <p style="font-size:13px;color:#64748b;margin-bottom:12px" id="texto-instrucao-mapa">
+    Detectadas <strong id="num-colunas">0</strong> colunas. Selecione qual corresponde a cada campo:
+  </p>
+  <div id="colunas-preview" class="colunas-preview"></div>
+  <div class="mapa-grid">
+    <div class="mapa-item">
+      <label>👤 CPF *</label>
+      <select id="map-cpf" onchange="this.classList.add('mapeado')"><option value="">— selecione —</option></select>
+    </div>
+    <div class="mapa-item">
+      <label>🏢 IPTU</label>
+      <select id="map-iptu" onchange="this.classList.add('mapeado')"><option value="">— não usar —</option></select>
+    </div>
+    <div class="mapa-item" id="item-valor-imovel">
+      <label>💰 Valor do Imóvel</label>
+      <select id="map-valor-imovel" onchange="this.classList.add('mapeado')"><option value="">— não usar —</option></select>
+    </div>
+    <div class="mapa-item" id="item-valor-terreno">
+      <label>🌱 Valor do Terreno</label>
+      <select id="map-valor-terreno" onchange="this.classList.add('mapeado')"><option value="">— não usar —</option></select>
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="extrairComMapa()">✅ Extrair dados</button>
+  </div>
+  <div id="status-mapa" class="status"></div>
+</div>
+
+<div class="card" id="card-tabela" style="display:none">
+  <h2>Passo 4 — Conferir e corrigir</h2>
+  <div class="alerta-ocr" id="alerta-ocr" style="display:none">
+    ⚠️ Campos em <span style="color:#dc2626;font-weight:700">vermelho</span> podem ter erros. Clique para corrigir.
+  </div>
+  <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th style="width:32px">#</th><th>CPF</th><th>IPTU</th><th>Valor Imóvel</th><th>Valor Terreno</th><th style="width:40px"></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-success" onclick="salvar()">✅ Salvar e ir para o ITCD</button>
+    <button class="btn btn-secondary" onclick="adicionarLinha()">+ Adicionar linha</button>
+  </div>
+  <div id="status-tabela" class="status"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3>✅ Pronto! Agora vá para o ITCD</h3>
+    <p>Siga os passos abaixo:</p>
+    <div class="steps-modal">
+      1. Abra a aba <strong>ITCD - Pedido de Isenção</strong><br>
+      2. Aperte <strong>F12</strong> → aba <strong>Console</strong><br>
+      3. Digite <strong>allow pasting</strong> e aperte <strong>Enter</strong> (só na 1ª vez)<br>
+      4. Cole o script abaixo e aperte <strong>Enter</strong>
+    </div>
+    <div class="script-box" id="script-box"></div>
+    <button class="btn-copiar" id="btn-copiar" onclick="copiarScript()">📋 Copiar script</button>
+    <button class="btn-fechar-modal" onclick="fecharModal()">Fechar</button>
+  </div>
+</div>
+
+<script>
+let tipoAtual='ITBI',linhasRaw=[],dadosExtraidos=[],SCRIPT_ITCD='';
+
+function selecionarTipo(t){
+  tipoAtual=t;
+  document.getElementById('btn-itbi').classList.toggle('ativo',t==='ITBI');
+  document.getElementById('btn-itcd').classList.toggle('ativo',t==='ITCD');
+  // Mostra só o campo de valor relevante
+  const vi=document.getElementById('item-valor-imovel');
+  const vt=document.getElementById('item-valor-terreno');
+  if(vi&&vt){
+    vi.style.display=t==='ITBI'?'block':'none';
+    vt.style.display=t==='ITCD'?'block':'none';
+  }
+}
+
+function normalizar(txt){
+  txt = txt.replace(/(\d{3}\.\d{3}\.\d{3})-\s*\n?\s*(\d{2})/g, '$1-$2'); // corrige CPF quebrado por espaço/quebra de linha após hífen
+  return txt.replace(/А/g,'A').replace(/В/g,'B').replace(/С/g,'C').replace(/Е/g,'E')
+    .replace(/К/g,'K').replace(/М/g,'M').replace(/Н/g,'H').replace(/О/g,'O')
+    .replace(/Р/g,'P').replace(/Т/g,'T').replace(/Х/g,'X').replace(/о/g,'o')
+    .replace(/х/g,'x').replace(/а/g,'a').replace(/р/g,'p').replace(/с/g,'c');
+}
+
+function preencherSelectsMapa(colunas,cpfCol){
+  ['map-cpf','map-iptu','map-valor-imovel','map-valor-terreno'].forEach(id=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML=id==='map-cpf'?'<option value="">— selecione —</option>':'<option value="">— não usar —</option>';
+    colunas.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.i;o.textContent=c.label;sel.appendChild(o);
+    });
+  });
+  if(cpfCol>=0){document.getElementById('map-cpf').value=cpfCol;document.getElementById('map-cpf').classList.add('mapeado');}
+}
+
+function montarMapaAutomatico(numRegistros){
+  const colunas=[
+    {i:0,label:'CPF'},
+    {i:1,label:'IPTU'},
+    {i:2,label:'Valor'},
+    {i:3,label:'Valor (mesmo valor, repetido)'}
+  ];
+  preencherSelectsMapa(colunas,0);
+  document.getElementById('map-iptu').value=1;
+  document.getElementById('map-iptu').classList.add('mapeado');
+  document.getElementById(tipoAtual==='ITBI'?'map-valor-imovel':'map-valor-terreno').value=2;
+  document.getElementById(tipoAtual==='ITBI'?'map-valor-imovel':'map-valor-terreno').classList.add('mapeado');
+  document.getElementById('colunas-preview').innerHTML='';
+  document.getElementById('banner-modo').style.display='block';
+  document.getElementById('banner-modo').style.background='#eff6ff';
+  document.getElementById('banner-modo').style.color='#1a56db';
+  document.getElementById('banner-modo').style.border='1px solid #bfdbfe';
+  document.getElementById('banner-modo').innerHTML='✨ <strong>Modo automático:</strong> o app já identificou CPF, IPTU e Valor no texto. Essas opções <strong>não</strong> correspondem às colunas originais do PDF/Excel/Sistema — são os dados já extraídos. Confirme abaixo se está tudo certo.';
+  document.getElementById('texto-instrucao-mapa').style.display='none';
+  document.getElementById('num-colunas').textContent=4;
+  document.getElementById('card-mapa').style.display='block';
+  document.getElementById('card-mapa').scrollIntoView({behavior:'smooth'});
+  mostrarStatus('status-analise',`${numRegistros} registros detectados automaticamente (CPF, IPTU e Valor). Selecione se o Valor é Imóvel ou Terreno.`,'info');
+}
+
+function analisarColunas(){
+  let texto=normalizar(document.getElementById('texto-dados').value.trim());
+  if(!texto){mostrarStatus('status-analise','Cole os dados antes de analisar.','erro');return;}
+
+  const linhasComQuebra=texto.split('\n').filter(l=>l.trim().length>1);
+  const cpfRe=/\d{3}\.\d{3}\.\d{3}-\d{2}/g;
+  const numCpfsTotal=(texto.match(cpfRe)||[]).length;
+  const linhasComSeparadorReal = linhasComQuebra.filter(l => l.includes('\t') || l.includes('|')).length;
+
+  // Tenta primeiro o padrão "par de linhas": Nome-CPF \n Endereco\tIPTU\tValor\tStatus (tabela do sistema)
+  const paresRe = /(\d{3}\.\d{3}\.\d{3}-\d{2})[^\n]*\n[^\t\n]+\t(\d{5,9}[X]?)\t(?:R\$\s*)?([\d\.]+,\d{2})/g;
+  const regsPar=[];
+  let mp;
+  while((mp=paresRe.exec(texto))!==null){
+    regsPar.push({cpf:mp[1],iptu:mp[2],valor:mp[3]});
+  }
+  if(regsPar.length>0 && regsPar.length>=numCpfsTotal*0.5){
+    linhasRaw=regsPar.map(r=>[r.cpf,r.iptu,r.valor,r.valor]);
+    montarMapaAutomatico(regsPar.length);
+    if(regsPar.length<numCpfsTotal){
+      mostrarStatus('status-analise',`⚠️ ${regsPar.length} de ${numCpfsTotal} registros extraídos. Alguns CPFs podem ter ficado de fora — confira a tabela e adicione manualmente se necessário.`,'erro');
+    }
+    return;
+  }
+
+  if(numCpfsTotal>=1 && linhasComSeparadorReal===0){
+    // Texto corrido OU fragmentado em muitas linhas (PDF do SEI copiado célula por célula)
+    // Junta tudo e extrai por blocos ancorados em CPF...VALOR
+    const textoUnido = linhasComQuebra.join(' ').replace(/\s+/g,' ');
+    const blocoRe=/(\d{3}\.\d{3}\.\d{3}-\d{2})\s+(.+?)\s+(\d{5,9}[X]?)\s+R\$\s*([\d\.]+,\d{2})/g;
+    const registros=[];
+    let m;
+    while((m=blocoRe.exec(textoUnido))!==null){
+      registros.push({cpf:m[1],iptu:m[3],valor:m[4]});
+    }
+    if(registros.length===0){mostrarStatus('status-analise','Não foi possível identificar os registros automaticamente. Verifique se há CPF, IPTU e Valor (R$) no texto.','erro');return;}
+
+    // Monta linhasRaw simulado: cada "coluna" é um campo já extraído
+    linhasRaw=registros.map(r=>[r.cpf,r.iptu,r.valor,r.valor]);
+    montarMapaAutomatico(registros.length);
+    return;
+  }
+
+  const linhas=linhasComQuebra;
+  const l0=linhas[0];
+  const tabs=(l0.match(/\t/g)||[]).length;
+  const pipes=(l0.match(/\|/g)||[]).length;
+  const sep=tabs>=pipes?'\t':'|';
+  linhasRaw=linhas.map(l=>l.split(sep).map(c=>c.trim()));
+  const maxCols=Math.max(...linhasRaw.map(l=>l.length));
+  const cpfReExato=/^\d{3}[\.,]\d{3}[\.,]\d{3}[-]\d{2}$/;
+  let cpfCol=-1;
+  const colunas=[];
+  for(let i=0;i<maxCols;i++){
+    const amostras=linhasRaw.slice(0,5).map(l=>l[i]||'').filter(v=>v);
+    if(amostras.some(v=>cpfReExato.test(v.trim())))cpfCol=i;
+    colunas.push({i,label:`Col ${i+1}: ${(amostras[0]||'').substring(0,18)}...`});
+  }
+  preencherSelectsMapa(colunas,cpfCol);
+  document.getElementById('colunas-preview').innerHTML=colunas.map((c,i)=>
+    `<span class="col-tag ${i===cpfCol?'cpf-tag':''}">${c.label}</span>`).join('');
+  document.getElementById('texto-instrucao-mapa').style.display='block';
+  document.getElementById('banner-modo').style.display='block';
+  document.getElementById('banner-modo').style.background='#f0fdf4';
+  document.getElementById('banner-modo').style.color='#16a34a';
+  document.getElementById('banner-modo').style.border='1px solid #bbf7d0';
+  document.getElementById('banner-modo').innerHTML='📊 <strong>Modo planilha:</strong> as colunas abaixo correspondem exatamente às colunas originais do Excel/PDF, na mesma ordem em que vieram.';
+  document.getElementById('num-colunas').textContent=maxCols;
+  document.getElementById('card-mapa').style.display='block';
+  document.getElementById('card-mapa').scrollIntoView({behavior:'smooth'});
+  mostrarStatus('status-analise',`${linhas.length} linhas, ${maxCols} colunas.${cpfCol>=0?' CPF detectado na coluna '+(cpfCol+1)+'.':''}`, 'info');
+}
+
+function formatarCPF(cpf){
+  const n=cpf.replace(/\D/g,'');
+  if(n.length===11)return`${n.slice(0,3)}.${n.slice(3,6)}.${n.slice(6,9)}-${n.slice(9)}`;
+  return cpf;
+}
+function validarCPF(cpf){return /^\d{3}[\.,]\d{3}[\.,]\d{3}[-]\d{2}$/.test(cpf);}
+function limparValor(v){return(v||'').replace(/^R\$\s*/,'').trim();}
+
+function extrairComMapa(){
+  const cpfIdx=parseInt(document.getElementById('map-cpf').value);
+  const iptuIdx=document.getElementById('map-iptu').value;
+  const viIdx=document.getElementById('map-valor-imovel').value;
+  const vtIdx=document.getElementById('map-valor-terreno').value;
+  if(isNaN(cpfIdx)){mostrarStatus('status-mapa','Selecione pelo menos a coluna de CPF.','erro');return;}
+  const cpfRe=/\d{3}[\.,]\d{3}[\.,]\d{3}[-]\d{2}/;
+  const registros=[];
+  linhasRaw.forEach(cols=>{
+    const raw=(cols[cpfIdx]||'').trim();
+    if(!cpfRe.test(raw))return;
+    registros.push({
+      cpf:formatarCPF(raw),
+      iptu:iptuIdx!==''?(cols[parseInt(iptuIdx)]||'').trim():'',
+      valorImovel:viIdx!==''?limparValor(cols[parseInt(viIdx)]):'',
+      valorTerreno:vtIdx!==''?limparValor(cols[parseInt(vtIdx)]):''
+    });
+  });
+  if(!registros.length){mostrarStatus('status-mapa','Nenhum CPF válido encontrado.','erro');return;}
+  dadosExtraidos=registros;
+  renderTabela(registros);
+  document.getElementById('card-tabela').style.display='block';
+  document.getElementById('card-tabela').scrollIntoView({behavior:'smooth'});
+  mostrarStatus('status-mapa',registros.length+' registros extraídos.','ok');
+}
+
+function renderTabela(registros){
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  let temErro=false;
+  registros.forEach((r,i)=>{
+    const ok=validarCPF(r.cpf);
+    if(!ok)temErro=true;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="color:#94a3b8;font-weight:600">${i+1}</td>
+      <td><input class="cell-input ${ok?'':'erro'}" value="${r.cpf}" placeholder="000.000.000-00"></td>
+      <td><input class="cell-input" value="${r.iptu}" placeholder="IPTU"></td>
+      <td><input class="cell-input" value="${r.valorImovel}" placeholder="00.000,00"></td>
+      <td><input class="cell-input" value="${r.valorTerreno}" placeholder="00.000,00"></td>
+      <td style="text-align:center"><button onclick="this.closest('tr').remove();renumerarLinhas()" style="background:#fef2f2;color:#dc2626;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px" title="Remover esta linha">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('alerta-ocr').style.display=temErro?'block':'none';
+}
+
+function renumerarLinhas(){
+  document.querySelectorAll('#tbody tr').forEach((tr,i)=>{
+    tr.querySelector('td').textContent=i+1;
+  });
+}
+
+function adicionarLinha(){
+  const tbody=document.getElementById('tbody');
+  const i=tbody.rows.length;
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td style="color:#94a3b8;font-weight:600">${i+1}</td>
+    <td><input class="cell-input" placeholder="000.000.000-00"></td>
+    <td><input class="cell-input" placeholder="IPTU"></td>
+    <td><input class="cell-input" placeholder="00.000,00"></td>
+    <td><input class="cell-input" placeholder="00.000,00"></td>
+    <td style="text-align:center"><button onclick="this.closest('tr').remove();renumerarLinhas()" style="background:#fef2f2;color:#dc2626;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px" title="Remover esta linha">✕</button></td>`;
+  tbody.appendChild(tr);tr.querySelector('input').focus();
+}
+
+function salvar(){
+  const linhas=document.querySelectorAll('#tbody tr');
+  const registros=[];let temErro=false;
+  linhas.forEach(tr=>{
+    const inputs=tr.querySelectorAll('input');
+    const cpf=inputs[0].value.trim();
+    if(!validarCPF(cpf)){inputs[0].classList.add('erro');temErro=true;}
+    else inputs[0].classList.remove('erro');
+    registros.push({cpf,iptu:inputs[1].value.trim(),valorImovel:inputs[2].value.trim(),valorTerreno:inputs[3].value.trim()});
+  });
+  if(temErro){mostrarStatus('status-tabela','⚠️ Corrija os campos em vermelho.','erro');return;}
+  const t=tipoAtual;
+  const dj=JSON.stringify(registros);
+  SCRIPT_ITCD=`(async function(){
+const dados=${dj};const tipo='${t}';
+async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function aguardar(fn,timeout){const inicio=Date.now();while(Date.now()-inicio<timeout){const el=fn();if(el&&!el.disabled)return el;await sleep(300);}return null;}
+const resp=prompt('Total: '+dados.length+' registros.\\nIniciar a partir de qual numero? (1=do inicio)');
+const index=Math.max(0,(parseInt(resp)||1)-1);
+alert('Iniciando a partir do registro '+(index+1)+' de '+dados.length);
+const naoEncontrados=[];let adicionados=0;
+for(let i=index;i<dados.length;i++){
+  const d=dados[i];const cpf=d.cpf;
+  const valor=tipo==='ITBI'?d.valorImovel:d.valorTerreno;
+  const btnAdd=await aguardar(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Adicionar Registro')),10000);
+  if(!btnAdd){alert('Botao Adicionar Registro nao encontrado! Parado no '+(i+1));break;}
+  btnAdd.click();await sleep(2000);
+  const inputs=document.querySelectorAll('input');
+  if(!inputs[0]){alert('Campo CPF nao encontrado! Parado no '+(i+1));break;}
+  const setter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+  setter.call(inputs[0],cpf);inputs[0].dispatchEvent(new Event('input',{bubbles:true}));await sleep(500);
+  const btnBuscar=await aguardar(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Buscar')),5000);
+  if(!btnBuscar){alert('Botao Buscar nao encontrado! Parado no '+(i+1));break;}
+  btnBuscar.click();await sleep(2500);
+  const naoAchado=Array.from(document.querySelectorAll('*')).find(el=>el.textContent.trim()==='Candidato n\u00e3o encontrado.');
+  if(naoAchado){
+    naoEncontrados.push((i+1)+'. '+cpf);
+    const btnF=Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Fechar'));
+    if(btnF)btnF.click();await sleep(1000);continue;
+  }
+  if(d.iptu){
+    const inp=document.querySelectorAll('input');
+    if(inp[4]){setter.call(inp[4],d.iptu);inp[4].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+    if(inp[5]&&valor){setter.call(inp[5],valor);inp[5].dispatchEvent(new Event('input',{bubbles:true}));await sleep(300);}
+  }
+  const btnAd=await aguardar(()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Adicionar'),15000);
+  if(!btnAd){alert('Botao Adicionar nao habilitado! Parado no '+(i+1)+'. Rode novamente a partir deste numero.');break;}
+  btnAd.click();await sleep(1500);adicionados++;
+  console.log('\\u2705 '+(i+1)+'/'+dados.length+' - '+cpf);
+}
+let resumo='\\u2705 Concluido!\\n\\nAdicionados: '+adicionados;
+if(naoEncontrados.length>0)resumo+='\\n\\u26a0\\ufe0f Nao encontrados ('+naoEncontrados.length+'):\\n'+naoEncontrados.join('\\n');
+alert(resumo);
+})();`;
+  mostrarStatus('status-tabela','✅ '+registros.length+' registros prontos!','ok');
+  document.getElementById('script-box').textContent=SCRIPT_ITCD;
+  document.getElementById('modal-overlay').classList.add('aberto');
+}
+
+function fecharModal(){document.getElementById('modal-overlay').classList.remove('aberto');}
+
+function copiarScript(){
+  navigator.clipboard.writeText(SCRIPT_ITCD).then(()=>{
+    const btn=document.getElementById('btn-copiar');
+    btn.textContent='✅ Copiado!';btn.classList.add('copiado');
+    setTimeout(()=>{btn.textContent='📋 Copiar script';btn.classList.remove('copiado');},2000);
+  });
+}
+
+function limpar(){
+  document.getElementById('texto-dados').value='';
+  if(document.getElementById('texto-itbi'))document.getElementById('texto-itbi').value='';
+  document.getElementById('tbody').innerHTML='';
+  document.getElementById('card-mapa').style.display='none';
+  document.getElementById('card-tabela').style.display='none';
+  document.getElementById('banner-modo').style.display='none';
+  ['status-analise','status-mapa','status-tabela','status-itbi'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  linhasRaw=[];dadosExtraidos=[];
+}
+
+function mostrarStatus(id,msg,tipo){
+  const el=document.getElementById(id);
+  el.textContent=msg;
+  el.className='status status-'+tipo;
+  el.style.display='block';
+}
+
+// Inicializa estado correto ao carregar
+window.onload=function(){ selecionarTipo('ITBI'); };
+</script>
+</body>
+</html>
