@@ -742,7 +742,7 @@ async function processarAtoPDF(input){
     const base64 = e.target.result.split(',')[1];
     // Chama a API do Claude para ler o PDF
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const resp = await fetch('https://claude-proxy.eng-lucasdf.workers.dev', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
