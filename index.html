@@ -4,6 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Extrator ITBI / ITCD — CODHAB</title>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAyuLMcKEZan1Xt_IzWoeaAebcgn8Cz4t4",
+  authDomain: "extrator-itbi-itcd.firebaseapp.com",
+  projectId: "extrator-itbi-itcd",
+  storageBucket: "extrator-itbi-itcd.firebasestorage.app",
+  messagingSenderId: "1068382806355",
+  appId: "1:1068382806355:web:543488cca1b1e8248d41a6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+window.db = db;
+window.storage = storage;
+window.fbCollection = collection;
+window.fbAddDoc = addDoc;
+window.fbGetDocs = getDocs;
+window.fbQuery = query;
+window.fbWhere = where;
+window.fbOrderBy = orderBy;
+window.fbRef = ref;
+window.fbUploadBytes = uploadBytes;
+window.fbGetDownloadURL = getDownloadURL;
+window.firebaseReady = true;
+window.dispatchEvent(new Event('firebaseReady'));
+</script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; min-height: 100vh; padding: 32px 24px; }
@@ -57,6 +89,28 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
 .btn-copiar:hover { background: #1648c0; }
 .btn-fechar-modal { width: 100%; padding: 10px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .copiado { background: #16a34a !important; }
+
+/* Abas */
+.abas { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; }
+.aba-btn { padding: 10px 20px; border: none; background: none; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+.aba-btn.ativa { color: #1a56db; border-bottom-color: #1a56db; }
+.aba-conteudo { display: none; }
+.aba-conteudo.ativa { display: block; }
+
+/* Histórico */
+.hist-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
+.hist-cpf { font-weight: 700; font-size: 14px; color: #1a2332; min-width: 140px; }
+.hist-info { font-size: 12px; color: #64748b; margin-top: 2px; }
+.hist-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+.hist-badge-itbi { background: #eff6ff; color: #1a56db; }
+.hist-badge-itcd { background: #f0fdf4; color: #16a34a; }
+.hist-badge-cancel { background: #fef2f2; color: #dc2626; }
+.hist-link { font-size: 12px; color: #1a56db; text-decoration: none; }
+.hist-link:hover { text-decoration: underline; }
+.aviso-duplicata { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 14px; display: none; }
+.upload-area { border: 2px dashed #e2e8f0; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.upload-area:hover { border-color: #1a56db; background: #eff6ff; }
+.upload-area input { display: none; }
 </style>
 </head>
 <body>
@@ -67,6 +121,15 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
     <p>CODHAB — Automação de lançamento de registros</p>
   </div>
 </header>
+
+<!-- Navegação por abas -->
+<div class="abas">
+  <button class="aba-btn ativa" onclick="mudarAba('extrator')">📋 Extrator</button>
+  <button class="aba-btn" onclick="mudarAba('historico')">📚 Histórico</button>
+</div>
+
+<!-- ABA EXTRATOR -->
+<div id="aba-extrator" class="aba-conteudo ativa">
 
 <div class="card">
   <h2>Passo 1 — Tipo de operação</h2>
@@ -167,6 +230,38 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
   <div id="status-tabela" class="status"></div>
 </div>
 
+</div><!-- fim aba-extrator -->
+
+<!-- ABA HISTÓRICO -->
+<div id="aba-historico" class="aba-conteudo">
+
+  <div class="card">
+    <h2>Registrar Ato Declaratório</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px">
+      Faça upload do PDF do Ato Declaratório para registrar os CPFs no histórico e salvar o documento.
+    </p>
+    <div class="upload-area" onclick="document.getElementById('input-pdf-ato').click()">
+      <input type="file" id="input-pdf-ato" accept=".pdf" onchange="processarAtoPDF(this)">
+      <div style="font-size:32px;margin-bottom:8px">📄</div>
+      <div style="font-weight:600;color:#475569">Clique para selecionar o PDF do Ato Declaratório</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:4px">O app vai extrair os CPFs, a data e salvar o documento automaticamente</div>
+    </div>
+    <div id="status-ato" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>Histórico de CPFs registrados</h2>
+    <div class="btn-row" style="margin-bottom:14px">
+      <input type="text" id="busca-hist" placeholder="Buscar por CPF..." style="flex:1;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none" oninput="filtrarHistorico()">
+      <button class="btn btn-secondary" onclick="carregarHistorico()">🔄 Atualizar</button>
+    </div>
+    <div id="hist-lista">
+      <div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Carregando histórico...</div>
+    </div>
+  </div>
+
+</div><!-- fim aba-historico -->
+
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
     <h3>✅ Pronto! Agora vá para o ITCD</h3>
@@ -204,6 +299,7 @@ function selecionarTipo(t){
 
 function normalizar(txt){
   txt = txt.replace(/(\d{3}\.\d{3}\.\d{3})-\s*\n?\s*(\d{2})/g, '$1-$2'); // corrige CPF quebrado por espaço/quebra de linha após hífen
+  txt = txt.replace(/(R\$\s*[\d\.]+,\d)\s+(\d)\b/g, '$1$2'); // corrige valor quebrado: "R$ 21.844,8 5" -> "R$ 21.844,85"
   return txt.replace(/А/g,'A').replace(/В/g,'B').replace(/С/g,'C').replace(/Е/g,'E')
     .replace(/К/g,'K').replace(/М/g,'M').replace(/Н/g,'H').replace(/О/g,'O')
     .replace(/Р/g,'P').replace(/Т/g,'T').replace(/Х/g,'X').replace(/о/g,'o')
@@ -276,17 +372,21 @@ function analisarColunas(){
     // Texto corrido OU fragmentado em muitas linhas (PDF do SEI copiado célula por célula)
     // Junta tudo e extrai por blocos ancorados em CPF...VALOR
     const textoUnido = linhasComQuebra.join(' ').replace(/\s+/g,' ');
-    const blocoRe=/(\d{3}\.\d{3}\.\d{3}-\d{2})\s+(.+?)\s+(\d{5,9}[X]?)\s+R\$\s*([\d\.]+,\d{2})/g;
+    const blocoRe=/(\d{3}\.\d{3}\.\d{3}-\d{2})\s+(?:(?!\d{3}\.\d{3}\.\d{3}-\d{2}).)*?(?:(\d{5,9}[X]?)\s+)?R\$\s*([\d\.]+,\d{2})/g;
     const registros=[];
     let m;
     while((m=blocoRe.exec(textoUnido))!==null){
-      registros.push({cpf:m[1],iptu:m[3],valor:m[4]});
+      registros.push({cpf:m[1],iptu:m[2]||'',valor:m[3]});
     }
     if(registros.length===0){mostrarStatus('status-analise','Não foi possível identificar os registros automaticamente. Verifique se há CPF, IPTU e Valor (R$) no texto.','erro');return;}
 
+    const semIptu = registros.filter(r=>!r.iptu).length;
     // Monta linhasRaw simulado: cada "coluna" é um campo já extraído
     linhasRaw=registros.map(r=>[r.cpf,r.iptu,r.valor,r.valor]);
     montarMapaAutomatico(registros.length);
+    if(semIptu>0){
+      mostrarStatus('status-analise',`⚠️ ${registros.length} registros extraídos, mas ${semIptu} ficaram sem IPTU (provavelmente perdido na cópia do PDF). Confira e complete manualmente na tabela abaixo.`,'erro');
+    }
     return;
   }
 
@@ -392,7 +492,7 @@ function adicionarLinha(){
   tbody.appendChild(tr);tr.querySelector('input').focus();
 }
 
-function salvar(){
+async function salvar(){
   const linhas=document.querySelectorAll('#tbody tr');
   const registros=[];let temErro=false;
   linhas.forEach(tr=>{
@@ -447,6 +547,11 @@ for(let i=index;i<dados.length;i++){
 }
 alert('\\u2705 Concluido! Adicionados: '+adicionados);
 })();`;
+    mostrarStatus('status-tabela','⏳ Verificando duplicatas...','info');
+    const dups1 = await verificarDuplicatas(registros.map(r=>r.cpf));
+    if(dups1.length>0 && !confirm(`⚠️ ${dups1.length} CPF(s) já processados antes:\n\n`+dups1.map(d=>`• ${d.cpf} — Ato nº ${d.numeroAto} em ${d.dataAto}`).join('\n')+'\n\nContinuar mesmo assim?')){
+      mostrarStatus('status-tabela','Operação cancelada.','erro'); return;
+    }
     mostrarStatus('status-tabela','✅ '+registros.length+' registros prontos!','ok');
     document.getElementById('script-box').textContent=SCRIPT_ITCD;
     document.getElementById('modal-overlay').classList.add('aberto');
@@ -494,6 +599,11 @@ let resumo='\\u2705 Concluido!\\n\\nAdicionados: '+adicionados;
 if(naoEncontrados.length>0)resumo+='\\n\\u26a0\\ufe0f Nao encontrados ('+naoEncontrados.length+'):\\n'+naoEncontrados.join('\\n');
 alert(resumo);
 })();`;
+  mostrarStatus('status-tabela','⏳ Verificando duplicatas...','info');
+  const dups2 = await verificarDuplicatas(registros.map(r=>r.cpf));
+  if(dups2.length>0 && !confirm(`⚠️ ${dups2.length} CPF(s) já processados antes:\n\n`+dups2.map(d=>`• ${d.cpf} — Ato nº ${d.numeroAto} em ${d.dataAto}`).join('\n')+'\n\nContinuar mesmo assim?')){
+    mostrarStatus('status-tabela','Operação cancelada.','erro'); return;
+  }
   mostrarStatus('status-tabela','✅ '+registros.length+' registros prontos!','ok');
   document.getElementById('script-box').textContent=SCRIPT_ITCD;
   document.getElementById('modal-overlay').classList.add('aberto');
@@ -530,7 +640,164 @@ function mostrarStatus(id,msg,tipo){
 }
 
 // Inicializa estado correto ao carregar
-window.onload=function(){ selecionarTipo('ITBI'); };
+window.onload=function(){
+  selecionarTipo('ITBI');
+  // Aguarda Firebase estar pronto
+  if(window.firebaseReady) carregarHistorico();
+  else window.addEventListener('firebaseReady', carregarHistorico);
+};
+
+// ============ ABAS ============
+function mudarAba(aba){
+  document.querySelectorAll('.aba-btn').forEach((b,i)=>{
+    b.classList.toggle('ativa', ['extrator','historico'][i]===aba);
+  });
+  document.getElementById('aba-extrator').classList.toggle('ativa', aba==='extrator');
+  document.getElementById('aba-historico').classList.toggle('ativa', aba==='historico');
+  if(aba==='historico') carregarHistorico();
+}
+
+// ============ HISTÓRICO ============
+let todosRegistros = [];
+
+async function carregarHistorico(){
+  if(!window.db) return;
+  const lista = document.getElementById('hist-lista');
+  lista.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Carregando...</div>';
+  try {
+    const snap = await window.fbGetDocs(
+      window.fbQuery(window.fbCollection(window.db,'historico_cpfs'), window.fbOrderBy('data','desc'))
+    );
+    todosRegistros = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderHistorico(todosRegistros);
+  } catch(e) {
+    lista.innerHTML = '<div style="color:#dc2626;padding:14px;font-size:13px">Erro ao carregar histórico: '+e.message+'</div>';
+  }
+}
+
+function renderHistorico(registros){
+  const lista = document.getElementById('hist-lista');
+  if(!registros.length){
+    lista.innerHTML='<div style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Nenhum registro encontrado.</div>';
+    return;
+  }
+  lista.innerHTML = registros.map(r=>`
+    <div class="hist-item">
+      <div style="flex:1">
+        <div class="hist-cpf">${r.cpf}</div>
+        <div class="hist-info">
+          ${r.nome||''} ${r.nome?'·':''} 
+          Ato nº ${r.numeroAto||'?'} · ${r.dataAto||'?'} ·
+          <span class="hist-badge hist-badge-${(r.tipo||'itbi').toLowerCase()}">${r.tipo||'ITBI'}</span>
+          ${r.urlPdf?`· <a class="hist-link" href="${r.urlPdf}" target="_blank">📄 Ver PDF</a>`:''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filtrarHistorico(){
+  const busca = document.getElementById('busca-hist').value.trim().toLowerCase();
+  if(!busca){ renderHistorico(todosRegistros); return; }
+  const filtrados = todosRegistros.filter(r=>
+    r.cpf.replace(/\D/g,'').includes(busca.replace(/\D/g,'')) ||
+    (r.nome||'').toLowerCase().includes(busca)
+  );
+  renderHistorico(filtrados);
+}
+
+async function verificarDuplicatas(cpfs){
+  if(!window.db||!cpfs.length) return [];
+  const duplicatas=[];
+  for(const cpf of cpfs){
+    const snap = await window.fbGetDocs(
+      window.fbQuery(window.fbCollection(window.db,'historico_cpfs'), window.fbWhere('cpf','==',cpf))
+    );
+    if(!snap.empty){
+      const r=snap.docs[0].data();
+      duplicatas.push({cpf, dataAto:r.dataAto, numeroAto:r.numeroAto});
+    }
+  }
+  return duplicatas;
+}
+
+async function salvarHistorico(cpfs, tipo, numeroAto, dataAto, urlPdf){
+  if(!window.db) return;
+  for(const cpf of cpfs){
+    await window.fbAddDoc(window.fbCollection(window.db,'historico_cpfs'),{
+      cpf, tipo, numeroAto, dataAto, urlPdf:urlPdf||'',
+      data: new Date().toISOString()
+    });
+  }
+}
+
+// ============ UPLOAD DO ATO PDF ============
+async function processarAtoPDF(input){
+  const file = input.files[0];
+  if(!file) return;
+  mostrarStatusAto('⏳ Lendo o PDF...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    const base64 = e.target.result.split(',')[1];
+    // Chama a API do Claude para ler o PDF
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages:[{
+            role:'user',
+            content:[
+              {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+              {type:'text', text:'Extraia do PDF: 1) O número do ato (ex: "377"), 2) A data (ex: "03/06/2026"), 3) O tipo (ITBI, ITCD ou CANCELAMENTO), 4) Todos os CPFs da tabela (sem formatação, 11 dígitos). Responda APENAS em JSON: {"numeroAto":"","dataAto":"","tipo":"","cpfs":["",""]}'}
+            ]
+          }]
+        })
+      });
+      const data = await resp.json();
+      const texto = data.content[0].text;
+      const clean = texto.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(clean);
+
+      const {numeroAto, dataAto, tipo, cpfs} = parsed;
+      const cpfsFormatados = cpfs.map(c=>{
+        const n=c.replace(/\D/g,'');
+        return n.length===11?`${n.slice(0,3)}.${n.slice(3,6)}.${n.slice(6,9)}-${n.slice(9)}`:c;
+      });
+
+      mostrarStatusAto(`✅ ${cpfsFormatados.length} CPFs encontrados no Ato nº ${numeroAto} (${dataAto}). Salvando...`, 'info');
+
+      // Upload do PDF para Firebase Storage
+      let urlPdf = '';
+      if(window.storage){
+        try {
+          const storageRef = window.fbRef(window.storage, `atos/${numeroAto}_${dataAto.replace(/\//g,'-')}_${Date.now()}.pdf`);
+          const snapshot = await window.fbUploadBytes(storageRef, file);
+          urlPdf = await window.fbGetDownloadURL(snapshot.ref);
+        } catch(se){ console.warn('Erro ao subir PDF:', se.message); }
+      }
+
+      // Salva no Firestore
+      await salvarHistorico(cpfsFormatados, tipo||'ITBI', numeroAto, dataAto, urlPdf);
+      mostrarStatusAto(`✅ ${cpfsFormatados.length} CPFs registrados no histórico! Ato nº ${numeroAto} · ${dataAto} ${urlPdf?'· PDF salvo ✅':''}`, 'ok');
+      carregarHistorico();
+
+    } catch(err){
+      mostrarStatusAto('Erro ao processar o PDF: '+err.message, 'erro');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function mostrarStatusAto(msg, tipo){
+  const el = document.getElementById('status-ato');
+  el.textContent = msg;
+  el.className = 'status status-'+tipo;
+  el.style.display = 'block';
+}
 </script>
 </body>
 </html>
