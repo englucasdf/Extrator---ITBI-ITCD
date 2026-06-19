@@ -769,6 +769,7 @@ function renderHistorico(registros){
     return;
   }
   const grupos = agruparPorAto(registros);
+  window._gruposHistorico = grupos;
   lista.innerHTML = grupos.map((g,i)=>`
     <div class="ato-grupo">
       <div class="ato-header" onclick="toggleAto(${i})">
@@ -777,7 +778,7 @@ function renderHistorico(registros){
         <span class="ato-meta">${g.dataAto} · <span class="hist-badge hist-badge-${g.tipo.toLowerCase()}">${g.tipo}</span> · ${g.cpfs.length} CPF${g.cpfs.length>1?'s':''}</span>
         <div class="ato-acoes" onclick="event.stopPropagation()">
           ${g.urlPdf?`<a class="hist-link" href="${g.urlPdf}" target="_blank">📄 Ver PDF</a>`:''}
-          <button class="btn-excluir-ato" onclick="excluirAto('${g.numeroAto}','${g.dataAto}',${JSON.stringify(g.ids)},${JSON.stringify(g.urlPdf)})">🗑️ Excluir</button>
+          <button class="btn-excluir-ato" onclick="excluirAtoIdx(${i})">🗑️ Excluir</button>
         </div>
       </div>
       <div class="ato-cpfs" id="cpfs-${i}">
@@ -802,6 +803,12 @@ function filtrarHistorico(){
     (r.numeroAto||'').toLowerCase().includes(busca)
   );
   renderHistorico(filtrados);
+}
+
+async function excluirAtoIdx(i){
+  const g = window._gruposHistorico[i];
+  if(!g) return;
+  await excluirAto(g.numeroAto, g.dataAto, g.ids, g.urlPdf);
 }
 
 async function excluirAto(numeroAto, dataAto, ids, urlPdf){
