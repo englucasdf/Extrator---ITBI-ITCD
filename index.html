@@ -182,11 +182,15 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: 
 <div class="card">
   <h2>Passo 2 — Cole os dados</h2>
   <p style="font-size:13px;color:#64748b;margin-bottom:12px">
-    Funciona com <strong>qualquer formato</strong> — Excel, PDF, tabela do sistema. Selecione os dados (sem cabeçalho), copie com <strong>Ctrl+C</strong> e cole abaixo.
+    Funciona com <strong>qualquer formato</strong> — Excel, PDF, tabela do sistema. Selecione os dados (sem cabeçalho), copie com <strong>Ctrl+C</strong> e cole abaixo. Ou faça upload de um PDF.
   </p>
   <textarea id="texto-dados" placeholder="Cole aqui os dados copiados (Excel, PDF, sistema...)"></textarea>
   <div class="btn-row">
     <button class="btn btn-primary" onclick="analisarColunas()">🔍 Analisar colunas</button>
+    <label class="btn btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+      📄 Upload PDF
+      <input type="file" id="input-pdf-extrator" accept=".pdf" style="display:none" onchange="extrairDadosPDF(this)">
+    </label>
     <button class="btn btn-secondary" onclick="limpar()">Limpar</button>
   </div>
   <div id="status-analise" class="status"></div>
@@ -658,7 +662,61 @@ window.onload=function(){
   else window.addEventListener('firebaseReady', carregarHistorico);
 };
 
-// ============ ABAS ============
+// ============ UPLOAD PDF NO EXTRATOR ============
+async function extrairDadosPDF(input){
+  const file = input.files[0];
+  if(!file) return;
+  mostrarStatus('status-analise','⏳ Lendo o PDF com IA...','info');
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    const base64 = e.target.result.split(',')[1];
+    try {
+      const resp = await fetch('https://claude-proxy.eng-lucasdf.workers.dev', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 2000,
+          messages:[{
+            role:'user',
+            content:[
+              {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+              {type:'text', text:`Extraia todos os registros da tabela deste PDF. Para cada pessoa, extraia: CPF (somente dígitos, 11 dígitos), IPTU/Inscrição (número de inscrição do imóvel), e Valor (base de cálculo em formato brasileiro ex: 339.456,00 sem R$). Responda APENAS em JSON: {"registros":[{"cpf":"","iptu":"","valor":""}]}`}
+            ]
+          }]
+        })
+      });
+      const data = await resp.json();
+      const texto = data.content[0].text;
+      const clean = texto.replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(clean);
+      const registros = parsed.registros || [];
+      if(!registros.length){ mostrarStatus('status-analise','Nenhum registro encontrado no PDF.','erro'); return; }
+      // Formata CPFs e monta dadosExtraidos
+      dadosExtraidos = registros.map(r=>{
+        const n=(r.cpf||'').replace(/\D/g,'');
+        const cpf = n.length===11?`${n.slice(0,3)}.${n.slice(3,6)}.${n.slice(6,9)}-${n.slice(9)}`:r.cpf;
+        return {
+          cpf,
+          iptu: r.iptu||'',
+          valorImovel: tipoAtual==='ITBI'?(r.valor||''):'',
+          valorTerreno: tipoAtual==='ITCD'?(r.valor||''):''
+        };
+      });
+      renderTabela(dadosExtraidos);
+      document.getElementById('card-tabela').style.display='block';
+      document.getElementById('card-tabela').scrollIntoView({behavior:'smooth'});
+      mostrarStatus('status-analise',`✅ ${registros.length} registros extraídos do PDF via IA.`,'ok');
+      // Reset input
+      input.value='';
+    } catch(err){
+      mostrarStatus('status-analise','Erro ao processar PDF: '+err.message,'erro');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+
 function mudarAba(aba){
   document.querySelectorAll('.aba-btn').forEach((b,i)=>{
     b.classList.toggle('ativa', ['extrator','historico'][i]===aba);
